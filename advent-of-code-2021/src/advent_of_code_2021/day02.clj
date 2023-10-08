@@ -1,6 +1,6 @@
 (ns advent-of-code-2021.day02
    (:require
-    [advent-of-code-2021.core :refer [lines parse-int]]
+    [advent-of-code-2021.core :refer [read-resource]]
     [clojure.string :as str]))
 
 (defn format-direction
@@ -9,9 +9,9 @@
         (str/split line #" ")]
     {(keyword direction) (parse-int amount)}))
 
-(defn get-moves [inputs]
+(defn parse-moves [inputs]
   (->> inputs
-     (lines)
+     (str/split-lines)
      (map format-direction)))
 
 (defn compute-result [{:keys [horizontal depth]}]
@@ -19,7 +19,8 @@
 
 (defn get-answer [input update-fn initial-state]
   (->> input
-       (get-moves)
+       (read-resource)
+       (parse-moves)
        (reduce update-fn initial-state)
        (compute-result)))
 
