@@ -20,6 +20,19 @@
     (into '() line->ints (parse-lines input))))
 
 ;; I might want to change the representation of the state later
+;;
+(defrecord Tables [non-winning-tables winning-tables])
+
+(defrecord State [to-be-extracted extracted tables])
+
+(defn parse-input-1 [input]
+  (let [numbers (first (str/split input #"\n\n"))
+        tables (rest (str/split input #"\n\n"))]
+  (->State (parse-numbers numbers)
+           '()
+           (->Tables
+            (map parse-table tables)
+            '()))))
 
 (defn get-number [state]
   (first (get state :numbers)))
@@ -121,6 +134,7 @@
         winning-tables (extract-winning-tables marked)]
     {:numbers next-numbers
      :tables next-tables
+     :extraxted-number current-number
      :winning-tables (concat winning-tables
                              (get-winning-tables current-state))}))
 
@@ -137,7 +151,48 @@
         number (get-exatracted-number winning-state)]
     (* number (reduce + (filter #(not= % "X") (flatten table))))))
 
+(defn last-winning? [state]
+  (empty? (get-tables state)))
+
+
+(defn second-game [input]
+    (->> input
+       (parse-input)
+       (iterate next-state)
+       (drop-while (complement last-winning?))
+       (first)))
+
+(defn get-second-solution [input]
+  (let [winning-state (second-game input)
+        table (first (get-winning-tables winning-state))
+        number (get-exatracted-number winning-state)]
+    (* number (reduce + (filter #(not= % "X") (flatten table))))))
+
+
+(defn play-game [winning-condition input]
+      (->> input
+       (parse-input)
+       (iterate next-state)
+       (drop-while (complement winning-condition))
+       (first)))
+
+(defn get-solution [input winning-condition]
+    (let [winning-state (play-game winning-condition input)
+        table (first (get-winning-tables winning-state))
+        number (get-exatracted-number winning-state)]
+    (* number (reduce + (filter #(not= % "X") (flatten table))))))
+
+
+
 #_(assert (= 4512
              (get-first-solution example-input)))
 #_(assert (= 60368
              (get-first-solution input)))
+
+#_
+(assert (= 17435
+           (get-second-solution example-input)))
+
+#_
+(assert (= 1924
+           (get-first-solution example-input)))
