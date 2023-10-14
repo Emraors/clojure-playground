@@ -19,53 +19,25 @@
                     (map #(map parse-int %)))]
     (into '() line->ints (parse-lines input))))
 
-;; I might want to change the representation of the state later
-;;
-(defrecord Tables [non-winning-tables winning-tables])
-
-(defrecord State [to-be-extracted extracted tables])
-
-(defn parse-input-1 [input]
-  (let [numbers (first (str/split input #"\n\n"))
-        tables (rest (str/split input #"\n\n"))]
-  (->State (parse-numbers numbers)
-           '()
-           (->Tables
-            (map parse-table tables)
-            '()))))
-
-(defn get-number [state]
+(defn extract-number [state]
   (first (get state :numbers)))
 
-(defn get-exatracted-number [state]
-  (get state :extraxted-number))
+(defn last-extracted-number [state]
+  (first (get state :extracted-numbers)))
 
-(defn get-next-numbers [state]
-  (rest (get state :numbers)))
+(defn playable-tables [state]
+  (get-in state [:tables :non-winning-tables]))
 
-(defn get-tables [state]
-  (get state :tables))
-
-(defn get-winning-tables [state]
-  (get state :winning-tables))
-
-(defn create-state [extracted numbers tables winning-tables]
-  {:numbers numbers
-   :tables tables
-   :extraxted-number extracted
-   :winning-tables winning-tables})
+(defn winning-tables [state]
+  (get-in state [:tables :winning-tables]))
 
 (defn parse-input [input]
   (let [numbers (first (str/split input #"\n\n"))
         tables (rest (str/split input #"\n\n"))]
-    (create-state
-     nil
-     (parse-numbers numbers)
-     (map parse-table tables)
-     '())))
-
-(defn winning? [state]
-  (not (empty? (get-winning-tables state))))
+    {:numbers (parse-numbers numbers)
+     :extracted-numbers '()
+     :tables {:winning-tables '()
+              :non-winning-tables (map parse-table tables)}}))
 
 (defn mark-table [number table]
   (map (fn [row]
@@ -83,116 +55,66 @@
     (or (winning-condition table)
         (winning-condition rows))))
 
-(defn find-winning-tables [tables]
-  (reduce (fn [{:keys [non-winning-tables winning-tables] :as state}
-               table]
-            (if (bingo? table)
-              {:non-winning-tables (remove
-                                    #(= % table)
-                                    non-winning-tables)
-               :winning-tables (cons table winning-tables)}
-              state))
-          {:non-winning-tables tables
-           :winning-tables '()}
-          tables))
-
-(defn get-non-winning-tables [tables]
-  ((comp #(get % :non-winning-tables)
-         find-winning-tables)
-   tables))
-
-(defn extract-winning-tables [tables]
-  ((comp #(get % :winning-tables)
-         find-winning-tables)
-   tables))
-
-#_
-(defn mark-and-check-tables [extracted-number
-                             {:keys [winning-tables
-                                     non-winning-tables]
-                              :as tables}]
+(defn mark-and-check-tables
+  [extracted-number {:keys [non-winning-tables winning-tables]}]
   (reduce (fn [{:keys [non-winning-tables
                        winning-tables] :as table-state}
                table]
             (let [marked-table (mark-table extracted-number table)]
               (if (bingo? marked-table)
                 {:non-winning-tables non-winning-tables
-                 :winning-tables (cons table winning-tables)}
+                 :winning-tables (cons marked-table winning-tables)}
                 {:non-winning-tables (cons marked-table non-winning-tables)
                  :winning-tables winning-tables})))
-            {:non-winning-tables '()
-             :winning-tables '()}
-            tables))
+          {:non-winning-tables '()
+           :winning-tables winning-tables}
+          non-winning-tables))
 
-;;fix this
-(defn next-state [current-state]
-  (let [current-number (get-number current-state)
-        next-numbers (get-next-numbers current-state)
-        tables (get-tables current-state)
-        marked (map (partial mark-table current-number) tables)
-        next-tables (get-non-winning-tables marked)
-        winning-tables (extract-winning-tables marked)]
-    {:numbers next-numbers
-     :tables next-tables
-     :extraxted-number current-number
-     :winning-tables (concat winning-tables
-                             (get-winning-tables current-state))}))
+(defn next-state
+  [{:keys [:tables :numbers :extracted-numbers] :as state}]
+  (let [current-number (extract-number state)]
+    (-> state
+        (update :numbers rest)
+        (update :extracted-numbers conj current-number)
+        (update :tables
+                (partial
+                 mark-and-check-tables
+                 current-number)))))
 
-(defn game [input]
-  (->> input
-       (parse-input)
-       (iterate next-state)
-       (drop-while (complement winning?))
-       (first)))
-
-(defn get-first-solution [input]
-  (let [winning-state (game input)
-        table (first (get-winning-tables winning-state))
-        number (get-exatracted-number winning-state)]
-    (* number (reduce + (filter #(not= % "X") (flatten table))))))
+(defn first-winning? [state]
+  (not (empty? (winning-tables state))))
 
 (defn last-winning? [state]
-  (empty? (get-tables state)))
-
+  (empty? (playable-tables state)))
 
 (defn second-game [input]
-    (->> input
+  (->> input
        (parse-input)
        (iterate next-state)
        (drop-while (complement last-winning?))
        (first)))
 
-(defn get-second-solution [input]
-  (let [winning-state (second-game input)
-        table (first (get-winning-tables winning-state))
-        number (get-exatracted-number winning-state)]
-    (* number (reduce + (filter #(not= % "X") (flatten table))))))
-
-
 (defn play-game [winning-condition input]
-      (->> input
+  (->> input
        (parse-input)
        (iterate next-state)
        (drop-while (complement winning-condition))
        (first)))
 
 (defn get-solution [input winning-condition]
-    (let [winning-state (play-game winning-condition input)
-        table (first (get-winning-tables winning-state))
-        number (get-exatracted-number winning-state)]
+  (let [winning-state (play-game winning-condition input)
+        table (first (winning-tables winning-state))
+        number (last-extracted-number winning-state)]
     (* number (reduce + (filter #(not= % "X") (flatten table))))))
 
 
+(assert (= 4512
+           (get-solution example-input first-winning?)))
+(assert (= 60368
+           (get-solution input first-winning?)))
 
-#_(assert (= 4512
-             (get-first-solution example-input)))
-#_(assert (= 60368
-             (get-first-solution input)))
-
-#_
-(assert (= 17435
-           (get-second-solution example-input)))
-
-#_
 (assert (= 1924
-           (get-first-solution example-input)))
+           (get-solution example-input last-winning?)))
+
+(assert (= 17435
+           (get-solution input last-winning?)))
