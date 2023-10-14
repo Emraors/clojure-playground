@@ -1,5 +1,5 @@
 (ns advent-of-code-2021.day04
-  (:require [advent-of-code-2021.core
+x  (:require [advent-of-code-2021.core
              :refer [parse-int parse-lines read-resource parse-binary]]
             [clojure.string :as str]))
 
