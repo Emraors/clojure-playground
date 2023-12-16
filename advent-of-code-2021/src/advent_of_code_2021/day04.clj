@@ -48,15 +48,14 @@
 
 (defn mark-and-check-tables
   [extracted-number {:keys [non-winning-tables winning-tables]}]
-  (reduce
-    (fn [{:keys [non-winning-tables winning-tables],
-          :as table-state} table]
-      (let [marked-table (mark-table extracted-number table)]
-        (if (bingo? marked-table)
-          {:non-winning-tables non-winning-tables,
-           :winning-tables (cons marked-table winning-tables)}
-          {:non-winning-tables (cons marked-table non-winning-tables),
-           :winning-tables winning-tables})))
+  (reduce (fn [{:keys [non-winning-tables winning-tables], :as table-state}
+               table]
+            (let [marked-table (mark-table extracted-number table)]
+              (if (bingo? marked-table)
+                {:non-winning-tables non-winning-tables,
+                 :winning-tables (cons marked-table winning-tables)}
+                {:non-winning-tables (cons marked-table non-winning-tables),
+                 :winning-tables winning-tables})))
     {:non-winning-tables '(), :winning-tables winning-tables}
     non-winning-tables))
 
