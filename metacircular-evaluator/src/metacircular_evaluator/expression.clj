@@ -2,7 +2,7 @@
 
 (def bool #{'TRUE 'FALSE})
 
-(defn self-evaluating? [exp] (or (number? exp) (string? exp) (bool exp)))
+(defn self-evaluating? [exp] (or (number? exp) (string? exp) (boolean? exp)))
 
 (defn variable? [exp] (symbol? exp))
 

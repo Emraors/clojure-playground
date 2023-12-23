@@ -33,7 +33,9 @@
        (resource)
        (slurp)))
 
-(defn parse-lines [input]
+(defn parse-lines
+  [input]
   "parses lines from a string"
   (->> input
        (split-lines)))
+

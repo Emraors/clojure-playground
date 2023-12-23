@@ -5,7 +5,6 @@
             [metacircular-evaluator.state :refer
              [create-state get-env get-expr lookup]]))
 
-
 (defn eval-state
   [state]
   (let [exp (get-expr state)
