@@ -1,31 +1,17 @@
 (ns metacircular-evaluator.core
-  (:gen-class))
+  (:gen-class)
+  (:require [metacircular-evaluator.expression :refer
+             [self-evaluating? variable?]]
+            [metacircular-evaluator.state :refer
+             [create-state get-env get-expr lookup]]))
 
 
-
-(def bool #{'TRUE 'FALSE})
-
-(defn self-evaluating? [exp] (or (number? exp) (string? exp) (bool exp)))
-
-(defn variable? [exp] (symbol? exp))
-
-(defn tagged-list? [tag exp] (and (list? exp) (= (first exp) tag)))
-
-(defn definition? [exp] (tagged-list? 'def exp))
-
-(defn lambda? [exp] (tagged-list? 'fn exp))
-
-(defn function? [exp] (tagged-list? 'defn exp))
-
-(defn if? [exp] (tagged-list? 'if exp))
-
-(defn cond? [exp] (tagged-list? 'cond exp))
-
-(defn let? [exp] (tagged-list? 'let exp))
-
-
-
-
+(defn eval-state
+  [state]
+  (let [exp (get-expr state)
+        env (get-env state)]
+    (cond (self-evaluating? exp) (create-state exp env)
+          (variable? exp) (create-state (lookup exp env) env))))
 
 
 
