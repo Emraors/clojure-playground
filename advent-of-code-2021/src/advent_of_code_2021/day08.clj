@@ -41,15 +41,80 @@
 (assert (= (get-first-solution (parse-input input)) 294))
 
 
-(def ex {:patterns
- ["be"
-  "cfbegad"
-  "cbdgef"
-  "fgaecd"
-  "cgeb"
-  "fdcge"
-  "agebfd"
-  "fecdb"
-  "fabcd"
-  "edb"],
- :outputs ["fdgacbe" "cefdb" "cefbgd" "gcbe"]})
+
+(def ex
+  {:patterns ["be" "cfbegad" "cbdgef" "fgaecd" "cgeb" "fdcge" "agebfd" "fecdb"
+              "fabcd" "edb"],
+   :outputs ["fdgacbe" "cefdb" "cefbgd" "gcbe"]})
+
+
+(defn get-one [pattern] (set (first (get (group-by count pattern) 2))))
+
+(defn get-seven [pattern] (set (first (get (group-by count pattern) 3))))
+
+(defn get-four [pattern] (set (first (get (group-by count pattern) 4))))
+
+(defn get-eight [pattern] (set (first (get (group-by count pattern) 7))))
+
+(defn get-three
+  [pattern]
+  (first (filter #(clojure.set/subset? (get-one pattern) %)
+           (map #(set %) (get (group-by count pattern) 5)))))
+
+(defn get-nine
+  [pattern]
+  (clojure.set/union (get-three pattern) (get-four pattern)))
+
+(defn get-g
+  [pattern]
+  (clojure.set/difference (get-eight pattern) (get-nine pattern)))
+
+(defn get-e
+  [pattern]
+  (clojure.set/difference (get-nine pattern) (get-three pattern)))
+
+(defn get-f
+  [pattern]
+  (clojure.set/difference (clojure.set/difference (get-four pattern)
+                                                  (get-one pattern))
+                          (get-g pattern)))
+
+(defn get-zero
+  [pattern]
+  (clojure.set/difference (get-eight pattern) (get-f pattern)))
+
+(defn get-c
+  [pattern]
+  (clojure.set/difference (clojure.set/difference (clojure.set/difference
+                                                    (get-nine pattern)
+                                                    (get-seven pattern))
+                                                  (get-e pattern))
+                          (get-f pattern)))
+
+(defn get-six
+  [pattern]
+  (first (filter #(not (clojure.set/subset? (get-one pattern) %))
+           (map #(set %) (get (group-by count pattern) 6)))))
+
+(defn get-a
+  [pattern]
+  (clojure.set/difference (get-eight pattern) (get-six pattern)))
+
+(defn get-five
+  [pattern]
+  (clojure.set/difference (get-nine pattern) (get-a pattern)))
+
+(defn get-b
+  [pattern]
+  (clojure.set/difference (get-one pattern) (get-a pattern)))
+
+(defn get-d
+  [pattern]
+  (clojure.set/difference (get-seven pattern) (get-eight pattern)))
+
+
+
+(def mapping {:one ""})
+
+
+(defn decode [mapping pattern])
