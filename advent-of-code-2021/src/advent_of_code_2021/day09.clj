@@ -1,7 +1,6 @@
 (ns advent-of-code-2021.day09
   (:require [advent-of-code-2021.core :refer
-             [parse-int parse-lines read-resource parse-binary]]
-            [clojure.string :as str]))
+             [parse-int parse-lines read-resource]]))
 
 (def input (read-resource "day09.txt"))
 
