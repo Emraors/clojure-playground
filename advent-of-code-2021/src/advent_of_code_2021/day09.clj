@@ -29,18 +29,20 @@
         values (map (fn [[x y]] (nth-mth board x y)) nn-cord)]
     (every? #(> % value) values)))
 
-(defn get-risk-levels
-  [board]
+(defn map-low-points
+  [map-fn board]
   (let [cols (count board)
         rows (count (first board))]
     (for [x (range rows)
           y (range cols)
           :when (low-point? board x y)]
-      (+ 1 (nth-mth board x y)))))
+      (map-fn board x y))))
 
 (defn get-first-solution
   [input]
-  (let [risk-levels (get-risk-levels input)] (apply + risk-levels)))
+  (->> input
+       (map-low-points (comp inc nth-mth))
+       (apply +)))
 
 (assert (= 15 (get-first-solution (parse-input example-input))))
 
@@ -74,19 +76,10 @@
                  (conj filled current))
           (recur remaining-stack filled))))))
 
-(defn get-basin-sizes
-  [board]
-  (let [cols (count board)
-        rows (count (first board))]
-    (for [x (range rows)
-          y (range cols)
-          :when (low-point? board x y)]
-      ((comp count fill) board x y))))
-
 (defn get-second-solution
   [input]
   (->> input
-       (get-basin-sizes)
+       (map-low-points (comp count fill))
        (#(take 3 (sort > %)))
        (apply *)))
 
