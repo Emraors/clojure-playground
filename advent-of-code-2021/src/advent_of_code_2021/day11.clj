@@ -39,13 +39,14 @@
 (defn flashed? [flashed coord] (contains? flashed coord))
 
 (defn to-be-flashed
-  [grid flashed]
-  (reduce (fn [acc [p _]]
-            (if (and (flash? grid p) (not (flashed? flashed p)))
-              (conj acc p)
-              acc))
-    #{}
-    grid))
+  ([grid flashed]
+   (reduce (fn [acc [p _]]
+             (if (and (flash? grid p) (not (flashed? flashed p)))
+               (conj acc p)
+               acc))
+     #{}
+     grid))
+  ([grid] (to-be-flashed grid #{})))
 
 (defn initial-state
   [board]
@@ -58,19 +59,13 @@
     {}
     current-grid))
 
-(defn inizialize-state
-  [{:keys [current-grid to-be-flashed flashed num-flashes]}]
-  {:current-grid (increment-non-flashed current-grid flashed),
-   :to-be-flashed
-     (to-be-flashed (increment-non-flashed current-grid to-be-flashed) #{}),
-   :num-flashes num-flashes,
-   :flashed flashed})
-
 (defn flash-local
   [{:keys [current-grid flashed], :as state}]
-  (let [inc-grid (increment-non-flashed current-grid flashed)
-        to-be-flashed (to-be-flashed inc-grid flashed)]
-    {:current-grid inc-grid, :to-be-flashed to-be-flashed, :flashed flashed}))
+  (-> state
+      (assoc :current-grid (increment-non-flashed current-grid flashed))
+      (assoc :to-be-flashed (to-be-flashed (increment-non-flashed current-grid
+                                                                  flashed)
+                                           flashed))))
 
 (defn flash-all
   [{:keys [current-grid to-be-flashed flashed num-flashes], :as state}]
@@ -90,23 +85,26 @@
       (flash-all new-state))))
 
 (defn reset-flashed
-  [{:keys [current-grid flashed num-flashes], :as state}]
-  {:current-grid
-     (reduce (fn [acc coord] (assoc acc coord 0)) current-grid flashed),
-   :num-flashes num-flashes})
+  [{:keys [current-grid flashed], :as state}]
+  (-> state
+      (assoc :current-grid (reduce (fn [acc coord] (assoc acc coord 0))
+                             current-grid
+                             flashed))
+      (assoc :flashed #{})))
+
 
 (defn step
   [state]
-  (-> state
-      ((fn [s]
-         {:current-grid (increment-non-flashed (s :current-grid) (s :flashed)),
-          :to-be-flashed (to-be-flashed (increment-non-flashed (s :current-grid)
-                                                               (s :flashed))
-                                        #{}),
-          :num-flashes (get state :num-flashes),
-          :flashed (get state :flashed #{})}))
-      flash-all
-      reset-flashed))
+  (let [increment-grid (increment-non-flashed (state :current-grid)
+                                              (state :flashed))
+        to-be-flashed (to-be-flashed (increment-non-flashed (state
+                                                              :current-grid)
+                                                            (state :flashed)))]
+    (-> state
+        (assoc :current-grid increment-grid)
+        (assoc :to-be-flashed to-be-flashed)
+        flash-all
+        reset-flashed)))
 
 (def test-board
   {[4 3] 1,
