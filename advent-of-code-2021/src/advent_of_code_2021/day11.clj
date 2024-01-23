@@ -36,38 +36,46 @@
 
 (defn flash? [m p] (> (get m p) 9))
 
-(defn flashed? [{:keys [flashed]} coord] (contains? flashed coord))
+(defn flashed? [flashed coord] (contains? flashed coord))
 
 (defn to-be-flashed
-  [{:keys [current-grid], :as state}]
+  [grid flashed]
   (reduce (fn [acc [p _]]
-            (if (and (flash? current-grid p) (not (flashed? state p)))
+            (if (and (flash? grid p) (not (flashed? flashed p)))
               (conj acc p)
               acc))
     #{}
-    current-grid))
+    grid))
 
 (defn initial-state
   [board]
   {:current-grid board, :to-be-flashed #{}, :flashed #{}, :num-flashes 0})
 
 (defn increment-non-flashed
-  [{:keys [current-grid], :as state}]
-  (reduce (fn [acc [k v]] (if (flashed? state [k v]) acc (assoc acc k (inc v))))
+  [current-grid flashed]
+  (reduce (fn [acc [k v]]
+            (if (flashed? flashed [k v]) acc (assoc acc k (inc v))))
     {}
     current-grid))
 
+(defn inizialize-state
+  [{:keys [current-grid to-be-flashed flashed num-flashes]}]
+  {:current-grid (increment-non-flashed current-grid flashed),
+   :to-be-flashed
+     (to-be-flashed (increment-non-flashed current-grid to-be-flashed) #{}),
+   :num-flashes num-flashes,
+   :flashed flashed})
+
 (defn flash-local
-  [{:keys [flashed], :as state}]
-  (let [inc-grid (increment-non-flashed state)
-        to-be-flashed (to-be-flashed {:current-grid inc-grid,
-                                      :flashed flashed})]
+  [{:keys [current-grid flashed], :as state}]
+  (let [inc-grid (increment-non-flashed current-grid flashed)
+        to-be-flashed (to-be-flashed inc-grid flashed)]
     {:current-grid inc-grid, :to-be-flashed to-be-flashed, :flashed flashed}))
 
 (defn flash-all
   [{:keys [current-grid to-be-flashed flashed num-flashes], :as state}]
   (if (empty? to-be-flashed)
-      state
+    state
     (let [to-flash (first to-be-flashed)
           local-grid (get-values current-grid to-flash)
           local-state (flash-local {:current-grid local-grid, :flashed flashed})
@@ -91,10 +99,10 @@
   [state]
   (-> state
       ((fn [s]
-         {:current-grid (increment-non-flashed s),
-          :to-be-flashed (to-be-flashed {:current-grid
-                                         (increment-non-flashed s)
-                                         :flashed #{}}),
+         {:current-grid (increment-non-flashed (s :current-grid) (s :flashed)),
+          :to-be-flashed (to-be-flashed (increment-non-flashed (s :current-grid)
+                                                               (s :flashed))
+                                        #{}),
           :num-flashes (get state :num-flashes),
           :flashed (get state :flashed #{})}))
       flash-all
@@ -181,37 +189,18 @@
    [0 1] 5,
    [4 0] 4})
 
-(= step-1-board
-   (-> test-board
-       initial-state
-       step
-       (get :current-grid)))
+(assert (= step-1-board
+           (-> test-board
+               initial-state
+               step
+               (get :current-grid))))
 
-(= step-2-board
-   (-> test-board
-       (initial-state)
-       step
-       step
-       (get :current-grid)))
-
-;; (= (-> "day11example1.txt"
-;;        read-resource
-;;        parse-input)
-;;    (-> example-input
-;;        parse-input
-;;        initial-state
-;;        step
-;;        (get :current-grid)))
-
-;; (= (-> "day11example2.txt"
-;;        read-resource
-;;        parse-input)
-;;    (-> example-input
-;;        parse-input
-;;        initial-state
-;;        step
-;;        step
-;;        (get :current-grid)))
+(assert (= step-2-board
+           (-> test-board
+               (initial-state)
+               step
+               step
+               (get :current-grid))))
 
 (defn get-first-solution
   [input]
@@ -222,6 +211,12 @@
        last
        (:num-flashes)))
 
-(assert (= 1656 (-> example-input parse-input get-first-solution)))
+(assert (= 1656
+           (-> example-input
+               parse-input
+               get-first-solution)))
 
-(assert (= 1637 (-> example-input parse-input get-first-solution)))
+(assert (= 1637
+           (-> input
+               parse-input
+               get-first-solution)))
