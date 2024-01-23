@@ -1,7 +1,6 @@
 (ns advent-of-code-2021.day11
   (:require [advent-of-code-2021.core :refer
-             [parse-int parse-lines read-resource]]
-            [clojure.string :as str]))
+             [parse-int parse-lines read-resource]]))
 
 ;; I am trying to explore new way of representing a matrix in Clojure. Instead
 ;; the
@@ -106,100 +105,6 @@
         flash-all
         reset-flashed)))
 
-(def test-board
-  {[4 3] 1,
-   [2 2] 1,
-   [0 0] 1,
-   [1 0] 1,
-   [2 3] 9,
-   [3 3] 9,
-   [1 1] 9,
-   [3 4] 1,
-   [4 2] 1,
-   [3 0] 1,
-   [4 1] 1,
-   [1 4] 1,
-   [1 3] 9,
-   [0 3] 1,
-   [2 4] 1,
-   [0 2] 1,
-   [2 0] 1,
-   [0 4] 1,
-   [3 1] 9,
-   [2 1] 9,
-   [4 4] 1,
-   [1 2] 9,
-   [3 2] 9,
-   [0 1] 1,
-   [4 0] 1})
-
-(def step-1-board
-  {[4 3] 4,
-   [2 2] 0,
-   [0 0] 3,
-   [1 0] 4,
-   [2 3] 0,
-   [3 3] 0,
-   [1 1] 0,
-   [3 4] 4,
-   [4 2] 5,
-   [3 0] 4,
-   [4 1] 4,
-   [1 4] 4,
-   [1 3] 0,
-   [0 3] 4,
-   [2 4] 5,
-   [0 2] 5,
-   [2 0] 5,
-   [0 4] 3,
-   [3 1] 0,
-   [2 1] 0,
-   [4 4] 3,
-   [1 2] 0,
-   [3 2] 0,
-   [0 1] 4,
-   [4 0] 3})
-
-(def step-2-board
-  {[4 3] 5,
-   [2 2] 1,
-   [0 0] 4,
-   [1 0] 5,
-   [2 3] 1,
-   [3 3] 1,
-   [1 1] 1,
-   [3 4] 5,
-   [4 2] 6,
-   [3 0] 5,
-   [4 1] 5,
-   [1 4] 5,
-   [1 3] 1,
-   [0 3] 5,
-   [2 4] 6,
-   [0 2] 6,
-   [2 0] 6,
-   [0 4] 4,
-   [3 1] 1,
-   [2 1] 1,
-   [4 4] 4,
-   [1 2] 1,
-   [3 2] 1,
-   [0 1] 5,
-   [4 0] 4})
-
-(assert (= step-1-board
-           (-> test-board
-               initial-state
-               step
-               (get :current-grid))))
-
-(assert (= step-2-board
-           (-> test-board
-               (initial-state)
-               step
-               step
-               (get :current-grid))))
-
 (defn get-first-solution
   [input]
   (->> input
@@ -218,3 +123,23 @@
            (-> input
                parse-input
                get-first-solution)))
+
+(defn all-flash? [{:keys [current-grid]}] (every? #(= % 0) (vals current-grid)))
+
+(defn get-second-solution
+  [input]
+  (->> input
+       initial-state
+       (iterate step)
+       (take-while (complement all-flash?))
+       count))
+
+(assert (= 195
+           (-> example-input
+               parse-input
+               get-second-solution)))
+
+(assert (= 242
+           (-> input
+               parse-input
+               get-second-solution)))
