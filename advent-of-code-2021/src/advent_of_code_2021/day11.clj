@@ -21,23 +21,6 @@
        (apply concat)
        (reduce (fn [acc [p c]] (assoc acc p ((comp parse-int str) c))) {})))
 
-(def state {:current-grid {}, :to-be-flashed #{}, :num-flashes 0})
-
-(defn increment-values [m] (reduce (fn [acc [k v]] (assoc acc k (inc v))) {} m))
-
-(defn flash? [m p] (= (get m p) 9))
-
-(defn to-be-flashed
-  [m]
-  (reduce (fn [acc [p _]] (if (flash? m p) (conj acc p) acc)) #{} m))
-
-(assert (= #{[8 8] [0 6] [1 9] [8 0] [1 4] [1 3] [1 8] [4 5] [3 1] [1 6] [2 6]
-             [6 2] [6 0] [1 2] [3 2]}
-           (-> input
-               parse-input
-               increment-values
-               to-be-flashed)))
-
 (defn get-values
   [board [x y]]
   (let [xs (for [dx [-1 0 1]
@@ -51,10 +34,194 @@
       {}
       xs)))
 
-;; (defn map-values
-;;   [m f]
-;;   (let [keys (keys m) values (mapv f (vals m))] (zipmap keys values)))
+(defn flash? [m p] (> (get m p) 9))
 
+(defn flashed? [{:keys [flashed]} coord] (contains? flashed coord))
 
-(defn flash [board [x y]])
+(defn to-be-flashed
+  [{:keys [current-grid], :as state}]
+  (reduce (fn [acc [p _]]
+            (if (and (flash? current-grid p) (not (flashed? state p)))
+              (conj acc p)
+              acc))
+    #{}
+    current-grid))
 
+(defn initial-state
+  [board]
+  {:current-grid board, :to-be-flashed #{}, :flashed #{}, :num-flashes 0})
+
+(defn increment-non-flashed
+  [{:keys [current-grid], :as state}]
+  (reduce (fn [acc [k v]] (if (flashed? state [k v]) acc (assoc acc k (inc v))))
+    {}
+    current-grid))
+
+(defn flash-local
+  [{:keys [flashed], :as state}]
+  (let [inc-grid (increment-non-flashed state)
+        to-be-flashed (to-be-flashed {:current-grid inc-grid,
+                                      :flashed flashed})]
+    {:current-grid inc-grid, :to-be-flashed to-be-flashed, :flashed flashed}))
+
+(defn flash-all
+  [{:keys [current-grid to-be-flashed flashed num-flashes], :as state}]
+  (if (empty? to-be-flashed)
+      state
+    (let [to-flash (first to-be-flashed)
+          local-grid (get-values current-grid to-flash)
+          local-state (flash-local {:current-grid local-grid, :flashed flashed})
+          local-grid (local-state :current-grid)
+          to-be-flashed-local (local-state :to-be-flashed)
+          new-state {:current-grid (merge current-grid local-grid),
+                     :to-be-flashed (clojure.set/union to-be-flashed-local
+                                                       (disj to-be-flashed
+                                                             to-flash)),
+                     :num-flashes (inc num-flashes),
+                     :flashed (conj flashed to-flash)}]
+      (flash-all new-state))))
+
+(defn reset-flashed
+  [{:keys [current-grid flashed num-flashes], :as state}]
+  {:current-grid
+     (reduce (fn [acc coord] (assoc acc coord 0)) current-grid flashed),
+   :num-flashes num-flashes})
+
+(defn step
+  [state]
+  (-> state
+      ((fn [s]
+         {:current-grid (increment-non-flashed s),
+          :to-be-flashed (to-be-flashed {:current-grid
+                                         (increment-non-flashed s)
+                                         :flashed #{}}),
+          :num-flashes (get state :num-flashes),
+          :flashed (get state :flashed #{})}))
+      flash-all
+      reset-flashed))
+
+(def test-board
+  {[4 3] 1,
+   [2 2] 1,
+   [0 0] 1,
+   [1 0] 1,
+   [2 3] 9,
+   [3 3] 9,
+   [1 1] 9,
+   [3 4] 1,
+   [4 2] 1,
+   [3 0] 1,
+   [4 1] 1,
+   [1 4] 1,
+   [1 3] 9,
+   [0 3] 1,
+   [2 4] 1,
+   [0 2] 1,
+   [2 0] 1,
+   [0 4] 1,
+   [3 1] 9,
+   [2 1] 9,
+   [4 4] 1,
+   [1 2] 9,
+   [3 2] 9,
+   [0 1] 1,
+   [4 0] 1})
+
+(def step-1-board
+  {[4 3] 4,
+   [2 2] 0,
+   [0 0] 3,
+   [1 0] 4,
+   [2 3] 0,
+   [3 3] 0,
+   [1 1] 0,
+   [3 4] 4,
+   [4 2] 5,
+   [3 0] 4,
+   [4 1] 4,
+   [1 4] 4,
+   [1 3] 0,
+   [0 3] 4,
+   [2 4] 5,
+   [0 2] 5,
+   [2 0] 5,
+   [0 4] 3,
+   [3 1] 0,
+   [2 1] 0,
+   [4 4] 3,
+   [1 2] 0,
+   [3 2] 0,
+   [0 1] 4,
+   [4 0] 3})
+
+(def step-2-board
+  {[4 3] 5,
+   [2 2] 1,
+   [0 0] 4,
+   [1 0] 5,
+   [2 3] 1,
+   [3 3] 1,
+   [1 1] 1,
+   [3 4] 5,
+   [4 2] 6,
+   [3 0] 5,
+   [4 1] 5,
+   [1 4] 5,
+   [1 3] 1,
+   [0 3] 5,
+   [2 4] 6,
+   [0 2] 6,
+   [2 0] 6,
+   [0 4] 4,
+   [3 1] 1,
+   [2 1] 1,
+   [4 4] 4,
+   [1 2] 1,
+   [3 2] 1,
+   [0 1] 5,
+   [4 0] 4})
+
+(= step-1-board
+   (-> test-board
+       initial-state
+       step
+       (get :current-grid)))
+
+(= step-2-board
+   (-> test-board
+       (initial-state)
+       step
+       step
+       (get :current-grid)))
+
+;; (= (-> "day11example1.txt"
+;;        read-resource
+;;        parse-input)
+;;    (-> example-input
+;;        parse-input
+;;        initial-state
+;;        step
+;;        (get :current-grid)))
+
+;; (= (-> "day11example2.txt"
+;;        read-resource
+;;        parse-input)
+;;    (-> example-input
+;;        parse-input
+;;        initial-state
+;;        step
+;;        step
+;;        (get :current-grid)))
+
+(defn get-first-solution
+  [input]
+  (->> input
+       initial-state
+       (iterate step)
+       (take 101)
+       last
+       (:num-flashes)))
+
+(assert (= 1656 (-> example-input parse-input get-first-solution)))
+
+(assert (= 1637 (-> example-input parse-input get-first-solution)))
